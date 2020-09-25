@@ -8,6 +8,7 @@ playground.R
 test_specific.R
 Rplots.pdf
 inst/doc
+.vscode
 
 # Created by https://www.toptal.com/developers/gitignore/api/R,c,c++
 # Edit at https://www.toptal.com/developers/gitignore?templates=R,c,c++
