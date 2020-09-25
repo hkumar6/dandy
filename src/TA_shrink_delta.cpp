@@ -12,14 +12,16 @@
 // compute threshold sequence once, then reuse it
 // not using alpha
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <float.h>
-#include <math.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <cfloat>
+#include <cmath>
+#include <cstring>
 
 #include "TA_common.h"
+
+using namespace Rcpp;
 
 #ifndef MC
 #define MC 2
@@ -54,7 +56,7 @@ int trials=TRIALS;
 // global variables to store info about worst box (also "private")
 double real_max_discr=0;
 int real_when=0, when=0;
-int current_iteration;
+// int current_iteration;
 
 
 //Computes the best of the rounded points -- basic version
@@ -84,14 +86,14 @@ double best_of_rounded_delta(int *xn_plus)
 #if (VERSION == 1)
   fxc = get_delta(xn_plus_grow);
 #ifdef PRINT_UPDATE_CANDIDATES
-  fprintf(stderr, "PRIVATE candidate %g (vs %g)\n",
+  Rprintf("PRIVATE candidate %g (vs %g)\n",
 	  fxc, real_max_discr);
 #endif
   if (fxc > real_max_discr) {
     real_max_discr = fxc;
     real_when = current_iteration;
 #ifdef PRINT_ALL_UPDATES
-    fprintf(stderr, "Secret update at %d to %g\n",
+    Rprintf("Secret update at %d to %g\n",
 	    current_iteration, fxc);
 #endif
   }
@@ -140,8 +142,8 @@ double delta_calc(double **pointset, int n, int d, int iter, int max_trials)
   int global_switches[trials+1];
 
   //Get pointset from external file
-  FILE *datei_ptr=stderr;
-  fprintf(datei_ptr,"GLP-Menge %d %d  ",d,n);
+  // FILE *datei_ptr=stderr;
+  Rprintf("GLP-Menge %d %d  ",d,n);
 
   //Sort the grid points, setup global variables
   process_coord_data(pointset, n, d);
@@ -149,7 +151,7 @@ double delta_calc(double **pointset, int n, int d, int iter, int max_trials)
   //Algorithm starts here
   for(t=1;t<=trials;t++)
     { //Initialization
-      fprintf(stderr, "Trial %d/%d\n", t, trials);
+      Rprintf("Trial %d/%d\n", t, trials);
 
       //Initialize k-value
       for (j=0; j<d; j++) {
@@ -230,7 +232,7 @@ double delta_calc(double **pointset, int n, int d, int iter, int max_trials)
 	      //Update k-value
 #ifdef PRINT_RANGE_DATA
 	      if (p==1)
-		fprintf(stderr, "Snapshot: range ");
+		Rprintf("Snapshot: range ");
 #endif
 	      for (j=0; j<d; j++) {
 		k[j] = start[j]*(((double)innerloop*outerloop-current_iteration)/(innerloop*outerloop)) +
@@ -238,7 +240,7 @@ double delta_calc(double **pointset, int n, int d, int iter, int max_trials)
 		  //		k[j]=(int)(start[j]-(int)(current_iteration/(innerloop*outerloop)*(start[j]-1)));
 #ifdef PRINT_RANGE_DATA
 		if (p==1)
-		  fprintf(stderr, "%d ", k[j]);
+		  Rprintf("%d ", k[j]);
 #endif
 	      }
 
@@ -246,26 +248,26 @@ double delta_calc(double **pointset, int n, int d, int iter, int max_trials)
 	      mc=2+(int)(current_iteration/(innerloop*outerloop)*(d-2));
 #ifdef PRINT_RANGE_DATA
 	      if (p==1)
-		fprintf(stderr, " threshold %g mc %d\n", T, mc);
+		Rprintf(" threshold %g mc %d\n", T, mc);
 #endif
 	      //mc=2;
 
 	      //Get random neighbor
 	      generate_neighbor_delta(xn_plus_index, xc_index,k,mc);
 #ifdef DISPLAY_CANDIDATES
-	      fprintf(stderr, "Old: ");
+	      Rprintf("Old: ");
 	      for (j=0; j<d; j++)
-		fprintf(stderr, "%d ", xc_index[j]);
-	      fprintf(stderr, "\nPlus: ");
+		Rprintf("%d ", xc_index[j]);
+	      Rprintf("\nPlus: ");
 	      for (j=0; j<d; j++)
-		fprintf(stderr, "%d ", xn_plus_index[j]);
-	      fprintf(stderr, "\n");
+		Rprintf("%d ", xn_plus_index[j]);
+	      Rprintf("\n");
 #endif
 
 	      //(Possibly) Snap the points and compute the best of the rounded points
 	      fxc = best_of_rounded_delta(xn_plus_index);
 #ifdef PRINT_UPDATE_CANDIDATES
-	      fprintf(stderr, "Iter. %d candidate %10g (vs %10g best %10g) -- ",
+	      Rprintf("Iter. %d candidate %10g (vs %10g best %10g) -- ",
 		      current_iteration, fxc, current, global[t]);
 #endif
 	      //Global update if necessary
@@ -274,19 +276,19 @@ double delta_calc(double **pointset, int n, int d, int iter, int max_trials)
 		global[t]=fxc;
 		when=current_iteration;
 #ifdef PRINT_UPDATE_CANDIDATES
-		fprintf(stderr, "global ");
+		Rprintf("global ");
 #endif
 #ifdef PRINT_ALL_UPDATES
-		fprintf(stderr, "%g at %d :", fxc, current_iteration);
+		Rprintf("%g at %d :", fxc, current_iteration);
 		for (j=0; j<d; j++)
-		  fprintf(stderr, " %d", xn_plus_index[j]);
-		fprintf(stderr, "\n");
+		  Rprintf(" %d", xn_plus_index[j]);
+		Rprintf("\n");
 #endif
 	      }
 	      //Update of current best value if necessary
 	      if(fxc-current>=T){
 #ifdef PRINT_UPDATE_CANDIDATES
-		fprintf(stderr, "update\n");
+		Rprintf("update\n");
 #endif
 		switches[t]++;
 		current=fxc;
@@ -296,7 +298,7 @@ double delta_calc(double **pointset, int n, int d, int iter, int max_trials)
 	      }
 #ifdef PRINT_UPDATE_CANDIDATES
 	      else {
-		fprintf(stderr, "skip\n");
+		Rprintf("skip\n");
 	      }
 #endif
 	    }//innerloop
@@ -304,10 +306,10 @@ double delta_calc(double **pointset, int n, int d, int iter, int max_trials)
       if (real_max_discr > global[t]) {
 	global[t] = real_max_discr;
 	when = real_when;
-	//	fprintf(stderr, "Max value subsumed\n");
+	//	Rprintf("Max value subsumed\n");
       }
-      fprintf(stderr, "Result %g at %d\n", global[t], when);
-      fprintf(stdout, "%g\n", global[t]); // To simplify post-execution bookkeeping
+      Rprintf("Result %g at %d\n", global[t], when);
+      Rprintf("%g\n", global[t]); // To simplify post-execution bookkeeping
     }//trials
 
 
@@ -327,30 +329,30 @@ double delta_calc(double **pointset, int n, int d, int iter, int max_trials)
     {
       if(global[t]==best) anzahl++;
     }
-  fprintf(datei_ptr,"best %e  ",best);
-  // for(j=0; j<d; j++)  fprintf(datei_ptr,"xbest %d coo  %e\n", j,xbest[j]);
+  Rprintf("best %e  ",best);
+  // for(j=0; j<d; j++)  Rprintf("xbest %d coo  %e\n", j,xbest[j]);
 
   //delta or bar(delta) causing best value?
-  //if(best==fabs(delta(xbest,GLP))) fprintf(datei_ptr,"delta\n");
-  //else fprintf(datei_ptr,"bar_delta\n");
+  //if(best==fabs(delta(xbest,GLP))) Rprintf("delta\n");
+  //else Rprintf("bar_delta\n");
 
   //calculation of mean value
   mean=0;
   for(t=1;t<=trials;t++) mean=mean+global[t];
   mean=mean/trials;
-  fprintf(datei_ptr,"mean %e  ",mean);
-  //fprintf(datei_ptr,"lower_bound %e\n",lower_bound);
-  //fprintf(datei_ptr,"upper_bound %e\n",upper_bound);
+  Rprintf("mean %e  ",mean);
+  //Rprintf("lower_bound %e\n",lower_bound);
+  //Rprintf("upper_bound %e\n",upper_bound);
 
-  //  fprintf(datei_ptr,"Anzahl der Iterationen: %d  ",iteration_count);
-  //fprintf(datei_ptr,"Wert von k: %d\n",k);
-  // fprintf(datei_ptr,"Wert von Extraminus: %d\n",extraminus);
-  fprintf(datei_ptr,"Anzahl best: %d\n",anzahl);
-  // for(i=1;i<=outerloop;i++) fprintf(datei_ptr,"Thresh %d = %e\n",i,thresh[i]);
+  //  Rprintf("Anzahl der Iterationen: %d  ",iteration_count);
+  //Rprintf("Wert von k: %d\n",k);
+  // Rprintf("Wert von Extraminus: %d\n",extraminus);
+  Rprintf("Anzahl best: %d\n",anzahl);
+  // for(i=1;i<=outerloop;i++) Rprintf("Thresh %d = %e\n",i,thresh[i]);
 
   // for(t=1;t<=trials;t++) {
-  //fprintf(datei_ptr,"Anzahl switches in Runde %d: %d\n",t,switches[t]);
-  //fprintf(datei_ptr,"Anzahl global_switches in Runde %d: %d\n",t,global_switches[t]);
+  //Rprintf("Anzahl switches in Runde %d: %d\n",t,switches[t]);
+  //Rprintf("Anzahl global_switches in Runde %d: %d\n",t,global_switches[t]);
   //}
 
   return best;
@@ -374,23 +376,23 @@ double delta_calc(double **pointset, int n, int d, int iter, int max_trials)
 //     if (!strcmp(argv[pos], "-kdiv")) {
 //       k_div = atoi(argv[++pos]);
 //       pos++;
-//       fprintf(stderr, "Using k = n/%d\n", k_div);
+//       Rprintf("Using k = n/%d\n", k_div);
 //     }
 //     else if (!strcmp(argv[pos], "-mc")) {
 //       mc = atoi(argv[++pos]);
 //       pos++;
-//       fprintf(stderr, "Using mc = %d\n", mc);
+//       Rprintf("Using mc = %d\n", mc);
 //     }
 //     else if (!strcmp(argv[pos], "-iter")) {
 //       i_tilde=(int)sqrt(atoi(argv[++pos]));
 //       pos++;
-//       fprintf(stderr, "Using %d iterations (adj. for sqrt)\n",
+//       Rprintf("Using %d iterations (adj. for sqrt)\n",
 // 	      i_tilde*i_tilde);
 //     }
 //     else if (!strcmp(argv[pos], "-trials")) {
 //       trials = atoi(argv[++pos]);
 //       pos++;
-//       fprintf(stderr, "Doing %d independent trials (currently: times ten thresh. rep.)\n",
+//       Rprintf("Doing %d independent trials (currently: times ten thresh. rep.)\n",
 // 	      trials);
 //       trials*=THRESH_REPEAT;
 
@@ -402,7 +404,7 @@ double delta_calc(double **pointset, int n, int d, int iter, int max_trials)
 //   case 0:
 //     i=scanf("%d %d reals\n", &dim, &npoints);
 //     if (i != 2) {
-//       fprintf(stderr, "stdin mode and header line not present\n");
+//       Rprintf("stdin mode and header line not present\n");
 //       exit(EXIT_FAILURE);
 //     }
 //     pointfile=stdin;
@@ -412,7 +414,7 @@ double delta_calc(double **pointset, int n, int d, int iter, int max_trials)
 //     pointfile = fopen(argv[pos], "r");
 //     i=fscanf(pointfile, "%d %d reals\n", &dim, &npoints);
 //     if (i != 2) {
-//       fprintf(stderr, "stdin mode and header line not present\n");
+//       Rprintf("stdin mode and header line not present\n");
 //       exit(EXIT_FAILURE);
 //     }
 //     break;
@@ -430,11 +432,11 @@ double delta_calc(double **pointset, int n, int d, int iter, int max_trials)
 //     break;
 
 //   default:
-//     fprintf(stderr, "Usage: calc_discr [dim npoints] [file]\n\nIf file not present, read from stdin. If dim, npoints not present, \nassume header '%%dim %%npoints reals' (e.g. '2 100 reals') in file.\n");
+//     Rprintf("Usage: calc_discr [dim npoints] [file]\n\nIf file not present, read from stdin. If dim, npoints not present, \nassume header '%%dim %%npoints reals' (e.g. '2 100 reals') in file.\n");
 //     exit(EXIT_FAILURE);
 //   }
 
-//   fprintf(stderr, "Reading dim %d npoints %d\n", dim, npoints);
+//   Rprintf("Reading dim %d npoints %d\n", dim, npoints);
 //   pointset = malloc(npoints*sizeof(double*));
 //   for (i=0; i<npoints; i++) {
 //     pointset[i] = malloc(dim*sizeof(double));
@@ -445,7 +447,7 @@ double delta_calc(double **pointset, int n, int d, int iter, int max_trials)
 //   }
 //   if (dim<mc)
 //     mc=dim;
-//   fprintf(stderr, "Calling Carola calculation\n");
+//   Rprintf("Calling Carola calculation\n");
 //   printf("%g\n", oldmain(pointset, npoints, dim));
 //   return EXIT_SUCCESS;
 

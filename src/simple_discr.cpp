@@ -1,5 +1,7 @@
 #include "simple_discr.h"
 
+using namespace Rcpp;
+
 // change the tuple; return bool: "success"
 int step_tuple(int *tuple, int dim, int max)
 {
@@ -53,7 +55,7 @@ double box_discr(double **pointset, int npoints, int dim,
 	onedge++;
     }
 
-  //  fprintf(stderr, "Points %d+%d vol %lg", inbox, onedge, discr);
+  //  Rprintf("Points %d+%d vol %lg", inbox, onedge, discr);
 
 
   discr -= (double)inbox/npoints;
@@ -61,7 +63,7 @@ double box_discr(double **pointset, int npoints, int dim,
   discr = fabs(discr);
   discr2 = fabs(discr2);
 
-  //  fprintf(stderr, " values %lg,%lg\n", discr, discr2);
+  //  Rprintf(" values %lg,%lg\n", discr, discr2);
 
   return (discr > discr2) ? discr : discr2;
 }
@@ -70,12 +72,12 @@ double exact_discr(double **pointset, int npoints, int dim)
 {
   double *point, **coords, maxdiscr=0.0, discr;
   int i,j, *tuple;
-  point = malloc(dim*sizeof(double));
-  tuple = malloc(dim*sizeof(int));
-  coords = malloc(dim*sizeof(double *));
+  point = (double *)std::malloc(dim*sizeof(double));
+  tuple = (int *)std::malloc(dim*sizeof(int));
+  coords = (double **)std::malloc(dim*sizeof(double *));
   for (i=0; i<dim; i++) {
     tuple[i]=0;
-    coords[i] = malloc((npoints+1)*sizeof(double));
+    coords[i] = (double *)std::malloc((npoints+1)*sizeof(double));
     for (j=0; j<npoints; j++)
       coords[i][j] = pointset[j][i];
     coords[i][npoints]=1.0;
@@ -87,10 +89,10 @@ double exact_discr(double **pointset, int npoints, int dim)
       point[i] = coords[i][tuple[i]];
     discr = box_discr(pointset, npoints, dim, point);
     if (discr > maxdiscr) {
-      fprintf(stderr, "Point (%g", point[0]);
+      Rprintf("Point (%g", point[0]);
       for (i=1; i<dim; i++)
-	fprintf(stderr, ", %g", point[i]);
-      fprintf(stderr, ") discr %g\n", discr);
+	Rprintf(", %g", point[i]);
+      Rprintf(") discr %g\n", discr);
       maxdiscr = discr;
     }
   }
@@ -101,10 +103,10 @@ double rnd_coord_discr(double **pointset, int npoints, int dim, int trials)
 {
   double *point, **coords, maxdiscr=0.0, discr;
   int i,j;
-  point = malloc(dim*sizeof(double));
-  coords = malloc(dim*sizeof(double *));
+  point = (double *)std::malloc(dim*sizeof(double));
+  coords = (double **)std::malloc(dim*sizeof(double *));
   for (i=0; i<dim; i++) {
-    coords[i] = malloc((npoints+1)*sizeof(double));
+    coords[i] = (double *)std::malloc((npoints+1)*sizeof(double));
     for (j=0; j<npoints; j++)
       coords[i][j] = pointset[j][i];
     coords[i][npoints]=1.0;
@@ -112,11 +114,12 @@ double rnd_coord_discr(double **pointset, int npoints, int dim, int trials)
 
   for (i=0; i<trials; i++) {
     for (j=0; j<dim; j++)
-      point[j] = coords[j][random()%(npoints+1)];
+      point[j] = coords[j][(int)(R::runif(0,1)*(npoints+1))];
+      // point[j] = coords[j][random()%(npoints+1)];
 
     discr = box_discr(pointset, npoints, dim, point);
     if (discr > maxdiscr) {
-      fprintf(stderr, "%d/%d: discr %g\n", i, trials, discr);
+      Rprintf("%d/%d: discr %g\n", i, trials, discr);
       maxdiscr = discr;
     }
   }

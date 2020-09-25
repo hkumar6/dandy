@@ -1,5 +1,5 @@
 #include "bz_discr.h"
-#include <stdio.h>
+#include <cstdlib>
 
 #define INT_EPS 1e-12
 // define SPAM to get trace output
@@ -9,8 +9,8 @@
 #endif
 // SPIM is more benign
 
-int comparedim;
-
+// already defined in header file
+// int comparedim;
 double globaldiscr;
 
 double fmax(double a,double b)
@@ -19,16 +19,17 @@ double fmax(double a,double b)
 }
 
 // argument is pointer to pointsetmember, i.e. double **.
-int cmpkeyk(double **pt1, double **pt2)
-{
-  double a=(*pt1)[comparedim], b=(*pt2)[comparedim];
-  if (a<b)
-    return -1;
-  else if (a>b)
-    return 1;
-  return 0;
-}
+// int cmpkeyk(double **pt1, double **pt2)
+// {
+//   double a=(*pt1)[comparedim], b=(*pt2)[comparedim];
+//   if (a<b)
+//     return -1;
+//   else if (a>b)
+//     return 1;
+//   return 0;
+// }
 
+// needs to be replaced
 // int cmpkeyk(const void *pt1, const void *pt2)
 // {
 //   double a = ((double *)(pt1))[comparedim];
@@ -40,6 +41,11 @@ int cmpkeyk(double **pt1, double **pt2)
 //   return 0;
 // }
 
+
+// int dbl_compare(const void *a, const void *b)
+// {
+//   return ( (*(double *) a - *(double *) b) ? -1 : 1 );
+// }
 
 
 int intpoints(double **pointset, int dim, int npoints, double *base)
@@ -94,8 +100,8 @@ double int_poly_discr(double **pointset, int dim, int npoints, int rempoints,
 
   for (i=cdim; i<dim; i++)
     basecopy[i]=base[i];
-  comparedim = cdim;
-  qsort(pointset, rempoints, sizeof(double *), cmpkeyk);
+  // comparedim = cdim;
+  qsort(pointset, rempoints, sizeof(double *), dbl_compare);
 #ifdef SPAM
   for (i=0; i<rempoints; i++) {
     fprintf(stderr, "Point %04d: (%g", i, pointset[i][0]);
@@ -107,7 +113,9 @@ double int_poly_discr(double **pointset, int dim, int npoints, int rempoints,
 
   for (i=0; i<rempoints; i++) {
     if (!cdim)
+#ifdef SPAM
       fprintf(stderr, "%d/%d\n", i, rempoints);
+#endif
     if (pointset[i][cdim] < base[cdim]-INT_EPS) {
 #ifdef SPAM
       fprintf(stderr, "Skip'ng %d: coord too small\n", i);
@@ -147,9 +155,9 @@ double int_poly_discr(double **pointset, int dim, int npoints, int rempoints,
   }
 #ifdef SPAM
     fprintf(stderr, "Calling 1.0\n");
-#endif
     if (!cdim)
       fprintf(stderr, "Trying 1.0\n");
+#endif
   base[cdim]=1.0;
   discr = int_poly_discr(pointset, dim, npoints, rempoints, base, cdim+1);
   for (j=cdim; j<dim; j++)
@@ -165,7 +173,7 @@ double poly_discr(double **pointset, int dim, int npoints)
   double *base, discr;
   int i;
   globaldiscr=0;
-  base = malloc(dim*sizeof(double));
+  base = (double*)std::malloc(dim*sizeof(double));
   for (i=0; i<dim; i++)
     base[i]=0.0;
   discr = int_poly_discr(pointset, dim, npoints, npoints, base, 0);

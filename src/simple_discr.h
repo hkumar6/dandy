@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <Rcpp.h>
+#include <Rmath.h>
 
 double exact_discr(double **pointset, int npoints, int dim);
 

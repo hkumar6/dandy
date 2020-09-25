@@ -1,8 +1,11 @@
 /* Contains common functions (= most) for TA discrepancy search */
 
+#include <Rcpp.h>
+#include <Rmath.h>
 
-#define max(a,b) ((a)>(b)?(a):(b))
-#define min(a,b) ((a)<(b)?(a):(b))
+// use C++ std algorithm
+// #define max(a,b) ((a)>(b)?(a):(b))
+// #define min(a,b) ((a)<(b)?(a):(b))
 
 // not recommended: PRINT_ALL_UPDATES
 #define PRINT_ALL_UPDATES
@@ -11,10 +14,11 @@
 //#define DISPLAY_CANDIDATES
 //#define PRINT_RANGE_DATA
 
-int n_dimensions, n_points;
-double *n_coords;
-double **coord;
-int **point_index;
+extern int n_dimensions, n_points;
+extern double *n_coords;
+extern double **coord;
+extern int **point_index;
+extern int current_iteration;
 
 #define grow_box_randomly grow_box_newer
 
@@ -22,6 +26,7 @@ int **point_index;
 // I made a replacement stump
 void quicksort(int left, int right, double *arr);
 
+// int dbl_compare(const void *a, const void *b);
 
 double get_coord(int d, int i);
 

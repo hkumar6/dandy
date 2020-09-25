@@ -12,14 +12,18 @@
 // compute threshold sequence once, then reuse it
 // not using alpha
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <float.h>
-#include <math.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <cfloat>
+#include <cmath>
+#include <cstring>
+#include <algorithm>
+#include <Rcpp.h>
 
 #include "TA_common.h"
+
+using namespace Rcpp;
 
 #ifndef MC
 #define MC 2
@@ -54,7 +58,7 @@ int trials_bardelta=TRIALS;
 // global variables to store info about worst box (also "private")
 double real_max_discr_bardelta=0;
 int real_when_bardelta=0, when_bardelta=0;
-int current_iteration;
+// int current_iteration;
 
 
 //Computes the best of the rounded points -- basic version
@@ -100,17 +104,17 @@ double best_of_rounded_bardelta(int *xn_minus, int *xn_extraminus, int *xc_index
   fxc = get_bar_delta(xn_minus_snap);
   if (use_extraminus) {
     fxn_extraminus=get_bar_delta(xn_extraminus_snap);
-    fxc=max(fxc, fxn_extraminus);
+    fxc=std::max(fxc, fxn_extraminus);
   }
 #ifdef PRINT_UPDATE_CANDIDATES
-  fprintf(stderr, "PRIVATE candidate %g (vs %g)\n",
+  Rprintf("PRIVATE candidate %g (vs %g)\n",
 	  fxc, real_max_discr_bardelta);
 #endif
   if (fxc > real_max_discr_bardelta) {
     real_max_discr_bardelta = fxc;
     real_when_bardelta = current_iteration;
 #ifdef PRINT_ALL_UPDATES
-    fprintf(stderr, "Secret update at %d to %g\n",
+    Rprintf("Secret update at %d to %g\n",
 	    current_iteration, fxc);
 #endif
   }
@@ -123,7 +127,7 @@ double best_of_rounded_bardelta(int *xn_minus, int *xn_extraminus, int *xc_index
   fxc = get_bar_delta(xn_minus_snap);
   if (use_extraminus) {
     fxn_extraminus=get_bar_delta(xn_extraminus_snap);
-    fxc=max(fxc, fxn_extraminus);
+    fxc=std::max(fxc, fxn_extraminus);
   }
 #else
   // versions 0,3 both compute from the point now given by xn_*
@@ -131,7 +135,7 @@ double best_of_rounded_bardelta(int *xn_minus, int *xn_extraminus, int *xc_index
   fxc = get_bar_delta(xn_minus);
   if (use_extraminus) {
     fxn_extraminus=get_bar_delta(xn_extraminus);
-    fxc=max(fxc, fxn_extraminus);
+    fxc=std::max(fxc, fxn_extraminus);
   }
 #endif
 
@@ -175,8 +179,9 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
   int global_switches[trials_bardelta+1];
 
   //Get pointset from external file
-  FILE *datei_ptr=stderr;
-  fprintf(datei_ptr,"GLP-Menge %d %d  ",d,n);
+  // Is this needed ?
+  // FILE *datei_ptr=stderr;
+  Rprintf("GLP-Menge %d %d  ",d,n);
 
   //Sort the grid points, setup global variables
   process_coord_data(pointset, n, d);
@@ -184,7 +189,7 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
   //Algorithm starts here
   for(t=1;t<=trials_bardelta;t++)
     { //Initialization
-      fprintf(stderr, "Trial %d/%d\n", t, trials_bardelta);
+      Rprintf("Trial %d/%d\n", t, trials_bardelta);
 
       //Initialize k-value
       for (j=0; j<d; j++) {
@@ -197,7 +202,7 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
       current_iteration=0;
 
       //Generate threshold sequence   (only once)
-      //      fprintf(stderr, "Generating threshold\n");
+      //      Rprintf("Generating threshold\n");
       for(i=1;i<=outerloop;i++){
 
 	current_iteration++;
@@ -266,7 +271,7 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
 	      //Update k-value
 #ifdef PRINT_RANGE_DATA
 	      if (p==1)
-		fprintf(stderr, "Snapshot: range ");
+		Rprintf("Snapshot: range ");
 #endif
 	      for (j=0; j<d; j++) {
 		k[j] = start[j]*(((double)innerloop*outerloop-current_iteration)/(innerloop*outerloop)) +
@@ -274,7 +279,7 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
 		  //		k[j]=(int)(start[j]-(int)(current_iteration/(innerloop*outerloop)*(start[j]-1)));
 #ifdef PRINT_RANGE_DATA
 		if (p==1)
-		  fprintf(stderr, "%d ", k[j]);
+		  Rprintf("%d ", k[j]);
 #endif
 	      }
 
@@ -282,29 +287,29 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
 	      mc_bardelta=2+(int)(current_iteration/(innerloop*outerloop)*(d-2));
 #ifdef PRINT_RANGE_DATA
 	      if (p==1)
-		fprintf(stderr, " threshold %g mc_bardelta %d\n", T, mc_bardelta);
+		Rprintf(" threshold %g mc_bardelta %d\n", T, mc_bardelta);
 #endif
 	      //mc_bardelta=2;
 
 	      //Get random neighbor
 	      generate_neighbor_bardelta(xn_minus_index, xn_extraminus_index, xc_index,k,mc_bardelta);
 #ifdef DISPLAY_CANDIDATES
-	      fprintf(stderr, "Old: ");
+	      Rprintf("Old: ");
 	      for (j=0; j<d; j++)
-		fprintf(stderr, "%d ", xc_index[j]);
-	      fprintf(stderr, "\nMinus: ");
+		Rprintf("%d ", xc_index[j]);
+	      Rprintf("\nMinus: ");
 	      for (j=0; j<d; j++)
-		fprintf(stderr, "%d ", xn_minus_index[j]);
-	      fprintf(stderr, "\nXMinus: ");
+		Rprintf("%d ", xn_minus_index[j]);
+	      Rprintf("\nXMinus: ");
 	      for (j=0; j<d; j++)
-		fprintf(stderr, "%d ", xn_extraminus_index[j]);
-	      fprintf(stderr, "\n");
+		Rprintf("%d ", xn_extraminus_index[j]);
+	      Rprintf("\n");
 #endif
 
 	      //(Possibly) Snap the points and compute the best of the rounded points
 	      fxc = best_of_rounded_bardelta(xn_minus_index, xn_extraminus_index, xn_best_index);
 #ifdef PRINT_UPDATE_CANDIDATES
-	      fprintf(stderr, "Iter. %d candidate %10g (vs %10g best %10g) -- ",
+	      Rprintf("Iter. %d candidate %10g (vs %10g best %10g) -- ",
 		      current_iteration, fxc, current, global[t]);
 #endif
 	      //Global update if necessary
@@ -313,19 +318,19 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
 		global[t]=fxc;
 		when_bardelta=current_iteration;
 #ifdef PRINT_UPDATE_CANDIDATES
-		fprintf(stderr, "global ");
+		Rprintf("global ");
 #endif
 #ifdef PRINT_ALL_UPDATES
-		fprintf(stderr, "%g at %d :", fxc, current_iteration);
+		Rprintf("%g at %d :", fxc, current_iteration);
 		for (j=0; j<d; j++)
-		  fprintf(stderr, " %d", xn_best_index[j]);
-		fprintf(stderr, "\n");
+		  Rprintf(" %d", xn_best_index[j]);
+		Rprintf("\n");
 #endif
 	      }
 	      //Update of current best value if necessary
 	      if(fxc-current>=T){
 #ifdef PRINT_UPDATE_CANDIDATES
-		fprintf(stderr, "update\n");
+		Rprintf("update\n");
 #endif
 		switches[t]++;
 		current=fxc;
@@ -335,7 +340,7 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
 	      }
 #ifdef PRINT_UPDATE_CANDIDATES
 	      else {
-		fprintf(stderr, "skip\n");
+		Rprintf("skip\n");
 	      }
 #endif
 	    }//innerloop
@@ -343,10 +348,10 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
       if (real_max_discr_bardelta > global[t]) {
 	global[t] = real_max_discr_bardelta;
 	when_bardelta = real_when_bardelta;
-	//	fprintf(stderr, "Max value subsumed\n");
+	//	Rprintf("Max value subsumed\n");
       }
-      fprintf(stderr, "Result %g at %d\n", global[t], when_bardelta);
-      fprintf(stdout, "%g\n", global[t]); // To simplify post-execution bookkeeping
+      Rprintf("Result %g at %d\n", global[t], when_bardelta);
+      Rprintf("%g\n", global[t]); // To simplify post-execution bookkeeping
     }//trials_bardelta
 
 
@@ -366,7 +371,7 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
     {
       if(global[t]==best) anzahl++;
     }
-  fprintf(datei_ptr,"best %e  ",best);
+  Rprintf("best %e  ",best);
   // for(j=0; j<d; j++)  fprintf(datei_ptr,"xbest %d coo  %e\n", j,xbest[j]);
 
   //delta or bar(delta) causing best value?
@@ -377,14 +382,14 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
   mean=0;
   for(t=1;t<=trials_bardelta;t++) mean=mean+global[t];
   mean=mean/trials_bardelta;
-  fprintf(datei_ptr,"mean %e  ",mean);
+  Rprintf("mean %e  ",mean);
   //fprintf(datei_ptr,"lower_bound %e\n",lower_bound);
   //fprintf(datei_ptr,"upper_bound %e\n",upper_bound);
 
   //  fprintf(datei_ptr,"Anzahl der Iterationen: %d  ",iteration_count);
   //fprintf(datei_ptr,"Wert von k: %d\n",k);
   // fprintf(datei_ptr,"Wert von Extraminus: %d\n",extraminus);
-  fprintf(datei_ptr,"Anzahl best: %d\n",anzahl);
+  Rprintf("Anzahl best: %d\n",anzahl);
   // for(i=1;i<=outerloop;i++) fprintf(datei_ptr,"Thresh %d = %e\n",i,thresh[i]);
 
   // for(t=1;t<=trials_bardelta;t++) {
@@ -413,23 +418,23 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
 //     if (!strcmp(argv[pos], "-kdiv")) {
 //       k_div_bardelta = atoi(argv[++pos]);
 //       pos++;
-//       fprintf(stderr, "Using k = n/%d\n", k_div_bardelta);
+//       Rprintf("Using k = n/%d\n", k_div_bardelta);
 //     }
 //     else if (!strcmp(argv[pos], "-mc_bardelta")) {
 //       mc_bardelta = atoi(argv[++pos]);
 //       pos++;
-//       fprintf(stderr, "Using mc_bardelta = %d\n", mc_bardelta);
+//       Rprintf("Using mc_bardelta = %d\n", mc_bardelta);
 //     }
 //     else if (!strcmp(argv[pos], "-iter")) {
 //       i_tilde_bardelta=(int)sqrt(atoi(argv[++pos]));
 //       pos++;
-//       fprintf(stderr, "Using %d iterations (adj. for sqrt)\n",
+//       Rprintf("Using %d iterations (adj. for sqrt)\n",
 // 	      i_tilde_bardelta*i_tilde_bardelta);
 //     }
 //     else if (!strcmp(argv[pos], "-trials_bardelta")) {
 //       trials_bardelta = atoi(argv[++pos]);
 //       pos++;
-//       fprintf(stderr, "Doing %d independent trials_bardelta (currently: times ten thresh. rep.)\n",
+//       Rprintf("Doing %d independent trials_bardelta (currently: times ten thresh. rep.)\n",
 // 	      trials_bardelta);
 //       trials_bardelta*=THRESH_REPEAT;
 
@@ -441,7 +446,7 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
 //   case 0:
 //     i=scanf("%d %d reals\n", &dim, &npoints);
 //     if (i != 2) {
-//       fprintf(stderr, "stdin mode and header line not present\n");
+//       Rprintf("stdin mode and header line not present\n");
 //       exit(EXIT_FAILURE);
 //     }
 //     pointfile=stdin;
@@ -451,7 +456,7 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
 //     pointfile = fopen(argv[pos], "r");
 //     i=fscanf(pointfile, "%d %d reals\n", &dim, &npoints);
 //     if (i != 2) {
-//       fprintf(stderr, "stdin mode and header line not present\n");
+//       Rprintf("stdin mode and header line not present\n");
 //       exit(EXIT_FAILURE);
 //     }
 //     break;
@@ -469,11 +474,11 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
 //     break;
 
 //   default:
-//     fprintf(stderr, "Usage: calc_discr [dim npoints] [file]\n\nIf file not present, read from stdin. If dim, npoints not present, \nassume header '%%dim %%npoints reals' (e.g. '2 100 reals') in file.\n");
+//     Rprintf("Usage: calc_discr [dim npoints] [file]\n\nIf file not present, read from stdin. If dim, npoints not present, \nassume header '%%dim %%npoints reals' (e.g. '2 100 reals') in file.\n");
 //     exit(EXIT_FAILURE);
 //   }
 
-//   fprintf(stderr, "Reading dim %d npoints %d\n", dim, npoints);
+//   Rprintf("Reading dim %d npoints %d\n", dim, npoints);
 //   pointset = malloc(npoints*sizeof(double*));
 //   for (i=0; i<npoints; i++) {
 //     pointset[i] = malloc(dim*sizeof(double));
@@ -484,7 +489,7 @@ double bardelta_calc(double **pointset, int n, int d, int iter, int max_trials)
 //   }
 //   if (dim<mc_bardelta)
 //     mc_bardelta=dim;
-//   fprintf(stderr, "Calling Carola calculation\n");
+//   Rprintf("Calling Carola calculation\n");
 //   printf("%g\n", oldmain(pointset, npoints, dim));
 //   return EXIT_SUCCESS;
 

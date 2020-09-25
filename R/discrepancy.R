@@ -23,8 +23,9 @@
 #' @references [1] Gnewuch, Michael, Magnus Wahlström, and Carola Winzen. "A NEW RANDOMIZED
 #' ALGORITHM TO APPROXIMATE THE STAR DISCREPANCY BASED ON THRESHOLD ACCEPTING."
 #' SIAM Journal on Numerical Analysis 50, no. 2 (2012): 781-807.
-#' www.jstor.org/stable/41582760.
+#' <www.jstor.org/stable/41582760>.
 #'
+#' @import Rcpp
 #' @examples
 #' d = design(n = 20, k = 3, method = "uniform")
 #' discrepancy(d)
@@ -49,10 +50,10 @@ discrepancy = function(x, method = "exact", iters = 1e5, trials = 10) {
       BBmisc::messagef("[dandy::discrepancy] Exact star-discrepancy calculation requires
         time O(n^{1+d/2}) time.\n Go grab yourself a coffee. This may take some time.")
     }
-    return(.Call("discrepancyExact", t(x)))
+    return(discrepancyExact(t(x)))
   }
 
   iters = checkmate::asInt(iters, lower = 100L)
   trials = checkmate::asInt(trials, lower = 1L)
-  return(.Call("discrepancyGWW", t(x), iters, trials))
+  return(discrepancyGWW(t(x), iters, trials))
 }

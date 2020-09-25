@@ -16,7 +16,9 @@ BugReports: https://github.com/jakobbossek/dandy/issues
 Depends:
     R (>= 2.10),
     BBmisc (>= 1.6)
+LinkingTo: Rcpp
 Imports:
+    Rcpp,
     checkmate (>= 1.1),
     randtoolbox,
     lhs
@@ -24,4 +26,4 @@ Suggests:
     testthat (>= 0.9.1)
 ByteCompile: yes
 LazyData: yes
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.1

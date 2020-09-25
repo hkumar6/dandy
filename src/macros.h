@@ -2,8 +2,9 @@
 #define SEXP_MACROS
 
 // basic math helpers
-#define MIN(A, B) ((A < B) ? (A) : (B))
-#define MAX(A, B) ((A > B) ? (A) : (B))
+// use the C++ std algorithm
+// #define MIN(A, B) ((A < B) ? (A) : (B))
+// #define MAX(A, B) ((A > B) ? (A) : (B))
 
 // R specific macros
 #define EXTRACT_NUMERIC_MATRIX(S_EXP, C_DATA, N_ROW, N_COL) \
@@ -28,4 +29,5 @@
 
 #define ALLOC_LIST(size) (ALLOC_VECTOR(VECSXP, size))
 
+#define GETM(x, i, j)  x(i,j)
 #endif

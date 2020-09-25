@@ -1,13 +1,16 @@
 /* Contains common functions (= most) for TA discrepancy search */
 
+#include "dbl_compare.h"
 #include "TA_common.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <float.h>
-#include <math.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <cfloat>
+#include <cmath>
+#include <cstring>
+
+using namespace Rcpp;
 
 // not recommended: PRINT_ALL_UPDATES
 #define PRINT_ALL_UPDATES
@@ -18,19 +21,25 @@
 
 // for stupid speedup reasons (alternative: make it static, and take care of initialization somehow)
 int *coordinate;
+double **coord;
+int current_iteration;
+double *n_coords;
+int n_dimensions, n_points;
+int **point_index;
 
 // we want to use C library qsort to sort.
 // I made a replacement stump
-int dbl_compare(const void *a, const void *b)
-{
-  const double *xp=a, *yp=b;
-  const double x=*xp, y=*yp;
-  if (x<y)
-    return -1;
-  if (x>y)
-    return 1;
-  return 0;
-} // oops: "x-y" gets cast to integer, rounded wrong
+// int dbl_compare(const void *a, const void *b)
+// {
+//   return ( (*(double *) a - *(double *) b) ? -1 : 1 );
+  // const double *xp=a, *yp=b;
+  // const double x=*xp, y=*yp;
+  // if (x<y)
+  //   return -1;
+  // if (x>y)
+  //   return 1;
+  // return 0;
+// } // oops: "x-y" gets cast to integer, rounded wrong
 
 void quicksort(int left, int right, double *arr)
 {
@@ -100,11 +109,11 @@ void process_coord_data(double **points, int n, int d)
   //initialise n_coords[], coord[][]
   n_dimensions=d;
   n_points=n;
-  coordinate=malloc(d*sizeof(int));
+  coordinate=(int *)std::malloc(d*sizeof(int));
   for (i=0; i<d; i++)
     coordinate[i]=i;
-  n_coords = malloc(n_dimensions*sizeof(double));
-  coord = malloc(n_dimensions*sizeof(double *));
+  n_coords = (double *)std::malloc(n_dimensions*sizeof(double));
+  coord = (double **)std::malloc(n_dimensions*sizeof(double *));
   for (i=0; i<n_dimensions; i++) {
     for (j=0; j<n_points; j++)
       tmp_coords[j+1]=points[j][i];
@@ -121,7 +130,7 @@ void process_coord_data(double **points, int n, int d)
       prev_coord=tmp_coords[j];
     }
     // 2. transfer
-    coord[i]=malloc(n_uniq*sizeof(double));
+    coord[i]=(double *)std::malloc(n_uniq*sizeof(double));
     idx=1;
     prev_coord=tmp_coords[0];
     coord[i][0]=prev_coord;
@@ -140,16 +149,15 @@ void process_coord_data(double **points, int n, int d)
   // finished setup for: n_coords[], coord[][]
 
   // next: transfer point set to into point_index
-  point_index=malloc(n_points*sizeof(int *));
+  point_index=(int **)std::malloc(n_points*sizeof(int *));
   for (i=0; i<n_points; i++)
-    point_index[i]=malloc(n_dimensions*sizeof(int));
+    point_index[i]=(int *)std::malloc(n_dimensions*sizeof(int));
   for (i=0; i<n_points; i++)
     for (j=0; j<n_dimensions; j++) {
       idx=get_index_up(j, points[i][j]);
       if (coord[j][idx] != points[i][j]) {
-	fprintf(stderr, "ERROR: located incorrect coordinate (%g at %d, wanted %g).\n",
+	      stop("ERROR: located incorrect coordinate (%g at %d, wanted %g).\n",
 		coord[j][idx], idx, points[i][j]);
-	abort();
       }
       point_index[i][j] = idx;
     }
@@ -238,7 +246,8 @@ void old_grow_box(int *corner)
   for (i=0; i<d; i++)
     order[i]=i;
   for (i=0; i<d; i++) {
-    j = i + random()%(d-i);
+    // j = i + random()%(d-i);
+    j = i + (int)((d-i)*R::runif(0,1));
     if (i != j) {
       swap=order[i];
       order[i]=order[j];
@@ -292,7 +301,8 @@ void grow_box_randomly(int *corner)
   for (i=0; i<d; i++)
     order[i]=i;
   for (i=0; i<d; i++) {
-    j = i + random()%(d-i);
+    // j = i + random()%(d-i);
+    j = i + (int)((d-i)*R::runif(0,1));
     if (i != j) {
       swap=order[i];
       order[i]=order[j];
@@ -322,19 +332,19 @@ void grow_box_randomly(int *corner)
       new_box[memo] = point_index[i][memo];
   }
 
-#ifdef DEBUG
-  if (count_open(corner) != count_open(new_box)) {
-    fprintf(stderr, "ERROR: Went from %d to %d points.\n", count_open(corner), count_open(new_box));
-    fprintf(stderr, "Old box: ");
-    for (i=0; i<d; i++)
-      fprintf(stderr, "%d ", corner[i]);
-    fprintf(stderr, "\nNew box: ");
-    for (i=0; i<d; i++)
-      fprintf(stderr, "%d ", new_box[i]);
-    fprintf(stderr, "\n");
-    abort();
-  }
-#endif
+// #ifdef DEBUG
+//   if (count_open(corner) != count_open(new_box)) {
+//     fprintf(stderr, "ERROR: Went from %d to %d points.\n", count_open(corner), count_open(new_box));
+//     fprintf(stderr, "Old box: ");
+//     for (i=0; i<d; i++)
+//       fprintf(stderr, "%d ", corner[i]);
+//     fprintf(stderr, "\nNew box: ");
+//     for (i=0; i<d; i++)
+//       fprintf(stderr, "%d ", new_box[i]);
+//     fprintf(stderr, "\n");
+//     abort();
+//   }
+// #endif
 
   for (i=0; i<d; i++)
     corner[i]=new_box[i];
@@ -352,7 +362,8 @@ void grow_box_older(int *corner)
   for (i=0; i<d; i++)
     order[i]=i;
   for (i=0; i<d; i++) {
-    j = i + random()%(d-i);
+    // j = i + random()%(d-i);
+    j = i + (int)((d-i)*R::runif(0,1));
     if (i != j) {
       swap=order[i];
       order[i]=order[j];
@@ -373,19 +384,19 @@ void grow_box_older(int *corner)
       }
     }
   }
-#ifdef DEBUG
-  if (count_open(corner) != count_open(new_box)) {
-    fprintf(stderr, "ERROR: Went from %d to %d points.\n", count_open(corner), count_open(new_box));
-    fprintf(stderr, "Old box: ");
-    for (i=0; i<d; i++)
-      fprintf(stderr, "%d ", corner[i]);
-    fprintf(stderr, "\nNew box: ");
-    for (i=0; i<d; i++)
-      fprintf(stderr, "%d ", new_box[i]);
-    fprintf(stderr, "\n");
-    abort();
-  }
-#endif
+// #ifdef DEBUG
+//   if (count_open(corner) != count_open(new_box)) {
+//     fprintf(stderr, "ERROR: Went from %d to %d points.\n", count_open(corner), count_open(new_box));
+//     fprintf(stderr, "Old box: ");
+//     for (i=0; i<d; i++)
+//       fprintf(stderr, "%d ", corner[i]);
+//     fprintf(stderr, "\nNew box: ");
+//     for (i=0; i<d; i++)
+//       fprintf(stderr, "%d ", new_box[i]);
+//     fprintf(stderr, "\n");
+//     abort();
+//   }
+// #endif
 
   for (i=0; i<d; i++)
     corner[i]=new_box[i];
@@ -462,8 +473,10 @@ void generate_xc(int *xn_plus, int *xn_minus, int *xn_extraminus)
   double temp;
   for(j=0; j<d; j++)
     {
-      temp=(double)((double)rand()/RAND_MAX);
-      xn[j]=pow(temp,(double)((double)1/(double)d));
+      // temp=(double)((double)rand()/RAND_MAX);
+      // xn[j]=pow(temp,(double)((double)1/(double)d));
+      temp = R::runif(0,1);
+      xn[j]=pow(temp, 1.0/d);
     }
   round_point_up(xn, xn_plus);
   round_point_down(xn, xn_minus);
@@ -477,8 +490,10 @@ void generate_xc_delta(int *xn_plus)
   double temp;
   for(j=0; j<d; j++)
     {
-      temp=(double)((double)rand()/RAND_MAX);
-      xn[j]=pow(temp,(double)((double)1/(double)d));
+      // temp=(double)((double)rand()/RAND_MAX);
+      // xn[j]=pow(temp,(double)((double)1/(double)d));
+    temp = R::runif(0,1);
+    xn[j]=pow(temp, 1.0/d);
     }
   round_point_up(xn, xn_plus);
 }
@@ -490,8 +505,10 @@ void generate_xc_bardelta(int *xn_minus, int *xn_extraminus)
   double temp;
   for(j=0; j<d; j++)
     {
-      temp=(double)((double)rand()/RAND_MAX);
-      xn[j]=pow(temp,(double)((double)1/(double)d));
+      // temp=(double)((double)rand()/RAND_MAX);
+      // xn[j]=pow(temp,(double)((double)1/(double)d));
+      temp = R::runif(0,1);
+      xn[j]=pow(temp, 1.0/d);
     }
   round_point_down(xn, xn_minus);
   round_point_extradown(xn, xn_extraminus);
@@ -516,7 +533,8 @@ void generate_neighbor (int *xn_plus_index, int *xn_minus_index, int *xn_extrami
 
   // find mc different coordinates to be changed
   for (j=0; j<mc; j++) {
-    i = j + random()%(d-j);
+    // i = j + random()%(d-j);
+    i = j + (int)((d-j)*R::runif(0,1));
     if (i != j) {
       q = coordinate[j];
       coordinate[j]=coordinate[i];
@@ -536,9 +554,11 @@ void generate_neighbor (int *xn_plus_index, int *xn_minus_index, int *xn_extrami
       upper_bound=1.0;
 
     //draw a random number in [0,1]
-    temp=(double)((double)rand()/RAND_MAX);
+    // temp=(double)((double)rand()/RAND_MAX);
+    temp = R::runif(0,1);
     temp=(pow(upper_bound,d)-pow(lower_bound,d))*temp + pow(lower_bound,d);
-    xn[coordinate[j]]=pow(temp,(double)((double)1/(double)d));
+    // xn[coordinate[j]]=pow(temp,(double)((double)1/(double)d));
+    xn[coordinate[j]] = pow(temp, 1.0/d);
   }
 
   round_point_up(xn, xn_plus_index);
@@ -561,7 +581,8 @@ void generate_neighbor_delta(int *xn_plus_index,
 
   // find mc different coordinates to be changed
   for (j=0; j<mc; j++) {
-    i = j + random()%(d-j);
+    // i = j + random()%(d-j);
+    i = j + (int)((d-j)*R::runif(0,1));
     if (i != j) {
       q = coordinate[j];
       coordinate[j]=coordinate[i];
@@ -581,9 +602,11 @@ void generate_neighbor_delta(int *xn_plus_index,
       upper_bound=1.0;
 
     //draw a random number in [0,1]
-    temp=(double)((double)rand()/RAND_MAX);
+    // temp=(double)((double)rand()/RAND_MAX);
+    temp = R::runif(0,1);
     temp=(pow(upper_bound,d)-pow(lower_bound,d))*temp + pow(lower_bound,d);
-    xn[coordinate[j]]=pow(temp,(double)((double)1/(double)d));
+    // xn[coordinate[j]]=pow(temp,(double)((double)1/(double)d));
+    xn[coordinate[j]]=pow(temp, 1.0/d);
   }
 
   round_point_up(xn, xn_plus_index);
@@ -604,7 +627,8 @@ void generate_neighbor_bardelta(int *xn_minus_index, int *xn_extraminus_index,
 
   // find mc different coordinates to be changed
   for (j=0; j<mc; j++) {
-    i = j + random()%(d-j);
+    // i = j + random()%(d-j);
+    i = j + (int)((d-j)*R::runif(0,1));
     if (i != j) {
       q = coordinate[j];
       coordinate[j]=coordinate[i];
@@ -624,9 +648,11 @@ void generate_neighbor_bardelta(int *xn_minus_index, int *xn_extraminus_index,
       upper_bound=1.0;
 
     //draw a random number in [0,1]
-    temp=(double)((double)rand()/RAND_MAX);
+    // temp=(double)((double)rand()/RAND_MAX);
+    temp = R::runif(0,1);
     temp=(pow(upper_bound,d)-pow(lower_bound,d))*temp + pow(lower_bound,d);
-    xn[coordinate[j]]=pow(temp,(double)((double)1/(double)d));
+    // xn[coordinate[j]]=pow(temp,(double)((double)1/(double)d));
+    xn[coordinate[j]]=pow(temp, 1.0/d);
   }
 
   round_point_down(xn, xn_minus_index);
